@@ -1,5 +1,7 @@
 #include <iostream>
 // For disable PCL complile lib, to use PointXYZIR
+// Check if the changes are getting reflected
+
 #define PCL_NO_PRECOMPILE
 
 #include <ros/ros.h>
@@ -35,6 +37,7 @@ void callbackCloud(const sensor_msgs::PointCloud2::Ptr &cloud_msg)
     pcl::PointCloud<PointType> pc_ground;
     pcl::PointCloud<PointType> pc_non_ground;
 
+    cout << "Input PointCloud: " << pc_curr.size() << endl;
     pcl::fromROSMsg(*cloud_msg, pc_curr);
 
     PatchworkppGroundSeg->estimate_ground(pc_curr, pc_ground, pc_non_ground, time_taken);

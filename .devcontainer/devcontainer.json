@@ -1,0 +1,42 @@
+{
+  "name": "ROS Noetic with Patchwork++",
+  "build": {
+    "dockerfile": "../Dockerfile"  // Use the Dockerfile in the root of the project_repo
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode-remote.remote-containers",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "ms-python.python",
+        "ms-vscode.cpptools",
+        "ms-iot.vscode-ros",
+        "ms-vscode.cmake-tools",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "redhat.vscode-yaml",
+        "mhutchie.git-graph"
+      ]
+    }
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/src/patchwork-plusplus-ros,type=bind",
+  "mounts": [
+    "source=/home/prathamesh/experiment_ws/scripts,target=/workspace/scripts,type=bind",
+    "source=/home/prathamesh/Downloads/kitti_rosbags,target=/workspace/src/patchwork-plusplus-ros/rosbags,type=bind",
+    "source=/home/prathamesh/Downloads/data_odometry_velodyne,target=/workspace/datasets/semantic_kitti,type=bind",
+    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+  ],
+  "remoteUser": "root",
+  "postCreateCommand": "/bin/bash -c 'source /opt/ros/noetic/setup.bash && cd /workspace && catkin_make'",
+  "runArgs": [
+    "--name", "patchwork-plusplus-ros",
+    "--env", "DISPLAY",
+    "--env", "QT_X11_NO_MITSHM=1"
+  ]
+}
+
+
+
+

@@ -59,6 +59,14 @@ struct PointXYZILID
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW     // ensure proper alignment
 } EIGEN_ALIGN16;
 
+struct PointXYZI
+  {
+    PCL_ADD_POINT4D;                    // quad-word XYZ
+    std::uint8_t intensity;                 ///< laser intensity reading
+    std::uint16_t ring;                      ///< laser ring number
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW     // ensure proper alignment
+  } EIGEN_ALIGN16;
+
 // Register custom point struct according to PCL
 POINT_CLOUD_REGISTER_POINT_STRUCT(PointXYZILID,
                                   (float, x, x)
@@ -67,6 +75,12 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(PointXYZILID,
                                   (float, intensity, intensity)
                                   (std::uint16_t, label, label)
                                   (std::uint16_t, id, id))
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(PointXYZI,
+                                  (float, x, x)
+                                  (float, y, y)
+                                  (float, z, z)
+                                  (std::uint8_t, intensity, intensity))
 
 
 void PointXYZILID2XYZI(pcl::PointCloud<PointXYZILID>& src,
@@ -81,6 +95,20 @@ void PointXYZILID2XYZI(pcl::PointCloud<PointXYZILID>& src,
     dst->points.push_back(pt_xyzi);
   }
 }
+
+// void PointXYZIR2XYZI(pcl::PointCloud<PointXYZIR>& src,
+//                        pcl::PointCloud<pcl::PointXYZI>::Ptr dst){
+//   dst->points.clear();
+//   for (const auto &pt: src.points){
+//     pcl::PointXYZI pt_xyzi;
+//     pt_xyzi.x = pt.x;
+//     pt_xyzi.y = pt.y;
+//     pt_xyzi.z = pt.z;
+//     pt_xyzi.intensity = pt.intensity;
+//     dst->points.push_back(pt_xyzi);
+//   }
+// }
+
 std::vector<int> outlier_classes = {UNLABELED, OUTLIER};
 std::vector<int> ground_classes = {ROAD, PARKING, SIDEWALKR, OTHER_GROUND, LANE_MARKING, VEGETATION, TERRAIN};
 std::vector<int> ground_classes_except_terrain = {ROAD, PARKING, SIDEWALKR, OTHER_GROUND, LANE_MARKING};

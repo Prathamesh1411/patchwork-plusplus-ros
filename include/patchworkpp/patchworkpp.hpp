@@ -150,6 +150,9 @@ public:
         pub_normal      = node_handle_.advertise<sensor_msgs::PointCloud2>("normals", 100, true);
         pub_noise       = node_handle_.advertise<sensor_msgs::PointCloud2>("noise", 100, true);
         pub_vertical    = node_handle_.advertise<sensor_msgs::PointCloud2>("vertical", 100, true);
+        pub_RNR_cloud   = node_handle_.advertise<sensor_msgs::PointCloud2>("RNR_cloud", 100, true);
+        pub_CZM_cloud   = node_handle_.advertise<sensor_msgs::PointCloud2>("CZM_cloud", 100, true);
+        pub_init_seeds_cloud   = node_handle_.advertise<sensor_msgs::PointCloud2>("init_seeds", 100, true);
 
         min_range_z2_ = (7 * min_range_ + max_range_) / 8.0;
         min_range_z3_ = (3 * min_range_ + max_range_) / 4.0;
@@ -169,6 +172,7 @@ public:
         for (int i = 0; i < num_zones_; i++) {
             Zone z;
             initialize_zone(z, num_sectors_each_zone_[i], num_rings_each_zone_[i]);
+            cout << "Zone " << i << " initialized" << endl;
             ConcentricZoneModel_.push_back(z);
         }
     }
@@ -241,6 +245,7 @@ private:
     jsk_recognition_msgs::PolygonArray poly_list_;
 
     ros::Publisher PlaneViz, pub_revert_pc, pub_reject_pc, pub_normal, pub_noise, pub_vertical;
+    ros::Publisher pub_RNR_cloud, pub_CZM_cloud, pub_init_seeds_cloud;
     pcl::PointCloud<PointT> revert_pc_, reject_pc_, noise_pc_, vertical_pc_;
     pcl::PointCloud<PointT> ground_pc_;
 
@@ -375,6 +380,7 @@ void PatchWorkpp<PointT>::extract_initial_seeds(
         }
     }
 
+
     // Calculate the mean height value.
     for (int i = init_idx; i < p_sorted.points.size() && cnt < num_lpr_; i++) {
         sum += p_sorted.points[i].z;
@@ -442,6 +448,11 @@ void PatchWorkpp<PointT>::reflected_noise_removal(pcl::PointCloud<PointT> &cloud
             noise_idxs_.push(i);
         }
     }
+    sensor_msgs::PointCloud2 cloud_RNR;
+    pcl::toROSMsg(cloud_nonground, cloud_RNR);
+    cloud_RNR.header.stamp = ros::Time::now();
+    cloud_RNR.header.frame_id = cloud_in.header.frame_id;
+    pub_RNR_cloud.publish(cloud_RNR);
 
     if (verbose_) cout << "[ RNR ] Num of noises : " << noise_pc_.points.size() << endl;
 }
@@ -459,6 +470,7 @@ void PatchWorkpp<PointT>::estimate_ground(
         pcl::PointCloud<PointT> &cloud_nonground,
         double &time_taken) {
 
+    cout << "Estimating ground..." << endl;
     unique_lock<recursive_mutex> lock(mutex_);
 
     poly_list_.header.stamp = ros::Time::now();
@@ -477,15 +489,17 @@ void PatchWorkpp<PointT>::estimate_ground(
 
     cloud_ground.clear();
     cloud_nonground.clear();
-
+    cout << "RNR" << endl;
     // 1. Reflected Noise Removal (RNR)
     if (enable_RNR_) reflected_noise_removal(cloud_in, cloud_nonground);
 
     t1 = ros::Time::now().toSec();
 
+    cout << "CZM" << endl;
     // 2. Concentric Zone Model (CZM)
     flush_patches(ConcentricZoneModel_);
     pc2czm(cloud_in, ConcentricZoneModel_, cloud_nonground);
+    cout << "CZM done" << endl;
 
     t2 = ros::Time::now().toSec();
 
@@ -840,12 +854,16 @@ void PatchWorkpp<PointT>::extract_piecewiseground(
     // : removes potential vertical plane under the ground plane
     pcl::PointCloud<PointT> src_wo_verticals;
     src_wo_verticals = src;
+    ROS_INFO_STREAM("src_wo_verticals size: " << src_wo_verticals.size());
 
     if (enable_RVPF_)
     {
         for (int i = 0; i < num_iter_; i++)
         {
             extract_initial_seeds(zone_idx, src_wo_verticals, ground_pc_, th_seeds_v_);
+            ROS_INFO_STREAM("Extracted initial seeds size: " << ground_pc_.size());
+
+
             estimate_plane(ground_pc_);
 
             if (zone_idx == 0 && normal_(2) < uprightness_thr_)
@@ -1047,6 +1065,12 @@ void PatchWorkpp<PointT>::pc2czm(const pcl::PointCloud<PointT> &src, std::vector
             cloud_nonground.push_back(pt);
         }
     }
+
+    sensor_msgs::PointCloud2 cloud_CZM;
+    pcl::toROSMsg(cloud_nonground, cloud_CZM);
+    cloud_CZM.header.stamp = ros::Time::now();
+    cloud_CZM.header.frame_id = src.header.frame_id;
+    pub_CZM_cloud.publish(cloud_CZM);
 
     if (verbose_) cout << "[ CZM ] Divides pointcloud into the concentric zone model" << endl;
 }
